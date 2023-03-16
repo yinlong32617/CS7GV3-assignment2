@@ -1,0 +1,38 @@
+#version 330
+
+in vec3 vertex_position;
+in vec3 vertex_normal;
+
+out vec3 normal, pos;
+out vec3 TexCoords;
+
+uniform mat4 view;
+uniform mat4 proj;
+uniform mat4 model;
+
+uniform int vsSkySph;
+
+void sphere() {
+  gl_Position = proj * view * model * vec4(vertex_position,1.0);
+  pos = vec3(model*vec4(vertex_position,1.0));
+  normal = mat3(transpose(inverse(model)))*vertex_normal;
+}
+
+void skybox() {
+	TexCoords = vertex_position;
+	vec4 pos = proj * view * vec4(vertex_position, 1.0);
+	gl_Position = pos.xyww;	
+}
+
+void main(){  
+	if(vsSkySph == 1)
+	{
+		skybox();
+	}
+	else if(vsSkySph == 2)
+	{
+		sphere();
+	}
+}
+
+  

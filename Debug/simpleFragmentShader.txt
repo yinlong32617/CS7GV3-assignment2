@@ -1,0 +1,99 @@
+#version 330
+
+const float Air = 1.0;
+const float Glass = 1.52;
+
+// Air to glass ratio of the indices of refraction (Eta)
+const float Eta = Air / Glass;
+
+// Refractive_index Reflectivity
+const float R0 = ((Air - Glass) * (Air - Glass)) / ((Air + Glass) * (Air + Glass));
+
+in vec3 normal,pos;
+in vec3 TexCoords;
+
+out vec4 FragColor;
+
+uniform int goal;
+uniform int fsSkySph;
+uniform samplerCube skybox;
+uniform vec3 cameraPos;
+//vec3 cameraPos = vec3(0,0,0);
+
+vec4 LightPosition = vec4 (0.0, 10.0, 10.0, 0.0);
+
+void Fresnel()
+{
+	vec3 incident = normalize(pos - cameraPos);
+	vec3 v_refraction = refract(incident, normal, Eta);
+	vec3 v_reflaction = reflect(incident, normal);
+	float v_fresnel = R0 + (1.0 - R0) * pow((1.0 - dot(-incident, normal)), 5.0);
+
+	vec4 refractionColor = texture(skybox, normalize(v_refraction));
+	vec4 reflectionColor = texture(skybox, normalize(v_reflaction));
+
+	FragColor = mix(refractionColor,reflectionColor,v_fresnel);
+}
+
+void Dispersion()
+{
+	vec3 incident = normalize(pos - cameraPos);
+	//vec3 v_refraction = refract(incident, normal, Eta);
+	vec3 v_refraction_r = refract(incident, normal, Eta);
+	vec3 v_refraction_g = refract(incident, normal, Eta + 0.008);
+	vec3 v_refraction_b = refract(incident, normal, Eta + 0.016);
+	vec3 v_reflaction = reflect(incident, normal);
+	float v_fresnel = R0 + (1.0 - R0) * pow((1.0 - dot(-incident, normal)), 5.0);
+
+	//vec4 refractionColor = texture(skybox, normalize(v_refraction));
+	vec4 refractionColor;
+	refractionColor.x = texture(skybox, v_refraction_r).r;
+	refractionColor.y = texture(skybox, v_refraction_g).g;
+	refractionColor.z = texture(skybox, v_refraction_r).b;
+	vec4 reflectionColor = texture(skybox, normalize(v_reflaction));
+
+	FragColor = mix(refractionColor,reflectionColor,v_fresnel);
+}
+
+void Reflect()
+{
+	vec3 I = normalize(pos - cameraPos);
+	vec3 R = reflect(I, normalize(normal));
+	FragColor = vec4(texture(skybox, R).rgb, 1.0);
+}
+
+void Refract()
+{
+	float ratio = Eta; 
+	vec3 I = normalize(pos - cameraPos);
+	vec3 R = refract(I, normalize(normal), ratio);
+	FragColor = vec4(texture(skybox, R).rgb, 1.0);
+}
+
+void main()
+{
+	if(fsSkySph == 1) //skybox
+	{
+		FragColor = texture(skybox, TexCoords);
+	}
+	else if(fsSkySph == 2)
+	{
+		if(goal == 1)
+		{
+			Reflect();
+		}
+		else if(goal == 2)
+		{
+			Refract();		
+		}
+		else if(goal == 3)
+		{
+			Fresnel();
+		}
+		else if(goal == 4)
+		{
+			Dispersion();		
+		}
+	}	
+}
+
